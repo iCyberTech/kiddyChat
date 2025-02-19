@@ -47,6 +47,17 @@
       font-size: 0.8em;
       color: #555;
     }
+    .reactions {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .reaction-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2em;
+    }
     #message-form {
       display: flex;
       gap: 10px;
@@ -91,6 +102,20 @@
     #clear-chat:hover {
       background: #a71d2a;
     }
+    .delete-button, .edit-button, .pin-button {
+      background: none;
+      border: none;
+      color: #007bff;
+      cursor: pointer;
+      font-size: 0.8em;
+      margin-left: 10px;
+    }
+    .pinned-messages {
+      background: #fff3cd;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -108,7 +133,8 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAQLUzYqaCaFMV74_dmqC2scBJgi0I-rVw",
@@ -123,6 +149,7 @@
 
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
+    const storage = getStorage(app);
 
     const messagesDiv = document.getElementById("messages");
     const messageForm = document.getElementById("message-form");
@@ -154,10 +181,73 @@
         messageDiv.innerHTML = `
           <span>${message.username}: ${message.text}</span>
           <span class="message-info">${new Date(message.timestamp).toLocaleTimeString()}</span>
+          ${message.username === username ? `
+            <button class="delete-button" data-id="${id}">Delete</button>
+            <button class="edit-button" data-id="${id}">Edit</button>
+            <button class="pin-button" data-id="${id}">Pin</button>
+          ` : ''}
+          <div class="reactions">
+            <button class="reaction-button" data-id="${id}" data-reaction="👍">👍</button>
+            <button class="reaction-button" data-id="${id}" data-reaction="❤️">❤️</button>
+          </div>
         `;
         messagesDiv.appendChild(messageDiv);
       }
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      // Add event listeners for delete, edit, and reaction buttons
+      document.querySelectorAll('.delete-button').forEach(button => {
+        button.addEventListener('click', () => {
+          const messageId = button.getAttribute('data-id');
+          remove(ref(database, `messages/${messageId}`));
+        });
+      });
+
+      document.querySelectorAll('.edit-button').forEach(button => {
+        button.addEventListener('click', () => {
+          const messageId = button.getAttribute('data-id');
+          const newText = prompt("Edit your message:", messages[messageId].text);
+          if (newText) {
+            update(ref(database, `messages/${messageId}`), { text: newText });
+          }
+        });
+      });
+
+      document.querySelectorAll('.reaction-button').forEach(button => {
+        button.addEventListener('click', () => {
+          const messageId = button.getAttribute('data-id');
+          const reaction = button.getAttribute('data-reaction');
+          const reactionRef = ref(database, `messages/${messageId}/reactions/${reaction}`);
+          onValue(reactionRef, (snapshot) => {
+            const count = snapshot.val() || 0;
+            set(reactionRef, count + 1);
+          });
+        });
+      });
+
+      document.querySelectorAll('.pin-button').forEach(button => {
+        button.addEventListener('click', () => {
+          const messageId = button.getAttribute('data-id');
+          set(ref(database, `pinnedMessages/${messageId}`), messages[messageId]);
+        });
+      });
+    });
+
+    // Display pinned messages at the top
+    onValue(ref(database, "pinnedMessages"), (snapshot) => {
+      const pinnedMessages = snapshot.val();
+      const pinnedDiv = document.createElement("div");
+      pinnedDiv.className = "pinned-messages";
+      for (let id in pinnedMessages) {
+        const message = pinnedMessages[id];
+        pinnedDiv.innerHTML += `
+          <div>
+            <span>📌 ${message.username}: ${message.text}</span>
+            <span class="message-info">${new Date(message.timestamp).toLocaleTimeString()}</span>
+          </div>
+        `;
+      }
+      messagesDiv.prepend(pinnedDiv);
     });
 
     // Send a new message
