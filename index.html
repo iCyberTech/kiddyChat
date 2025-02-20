@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WeOne Chat</title>
   <style>
+    /* General Styles */
     body {
       font-family: 'Arial', sans-serif;
       margin: 0;
@@ -118,12 +119,13 @@
       margin-right: auto;
       max-width: 70%;
       padding: 10px;
-      border-radius: 8px;
+      border-radius: 12px;
       margin-bottom: 10px;
       animation: fadeIn 0.5s ease;
       display: flex;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
     }
 
     .message-recipient {
@@ -132,12 +134,13 @@
       margin-left: auto;
       max-width: 70%;
       padding: 10px;
-      border-radius: 8px;
+      border-radius: 12px;
       margin-bottom: 10px;
       animation: fadeIn 0.5s ease;
       display: flex;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
     }
 
     @keyframes fadeIn {
@@ -154,6 +157,9 @@
     .message-info {
       font-size: 0.8em;
       color: #555;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .message-actions {
@@ -168,34 +174,13 @@
       cursor: pointer;
       color: #667eea;
       font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s ease;
     }
 
     .message-actions button:hover {
-      text-decoration: underline;
-    }
-
-    .avatar {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    #avatar-upload {
-      display: none;
-    }
-
-    #avatar-label {
-      display: block;
-      text-align: center;
-      margin-top: 10px;
-      color: #667eea;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    #avatar-label:hover {
-      text-decoration: underline;
+      background: rgba(102, 126, 234, 0.1);
     }
 
     #message-form {
@@ -254,22 +239,22 @@
       }
     }
 
-    #clear-chat, #logout-button {
+    #home-button, #logout-button {
       margin-top: 10px;
       padding: 12px 20px;
-      background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       font-size: 16px;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
 
-    #clear-chat:hover, #logout-button:hover {
+    #home-button:hover, #logout-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
   </style>
 </head>
@@ -286,15 +271,13 @@
   <!-- Chat Container -->
   <div id="chat-container">
     <div id="app-name">WeOne Chat</div>
-    <label id="avatar-label" for="avatar-upload">Upload Avatar</label>
-    <input type="file" id="avatar-upload" accept="image/*" />
     <div id="messages"></div>
     <div id="typing-indicator"></div>
     <form id="message-form">
       <input type="text" id="message-input" placeholder="Type your message..." required />
       <button type="submit" id="send-button">Send</button>
     </form>
-    <button id="clear-chat">Clear Chat</button>
+    <button id="home-button" onclick="window.location.href='https://newness.com'">Home</button>
     <button id="logout-button">Logout</button>
   </div>
 
@@ -303,7 +286,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
     import { getDatabase, ref, push, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAQLUzYqaCaFMV74_dmqC2scBJgi0I-rVw",
@@ -319,7 +301,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
-    const storage = getStorage(app);
 
     const authContainer = document.getElementById("auth-container");
     const chatContainer = document.getElementById("chat-container");
@@ -331,12 +312,9 @@
     const messageForm = document.getElementById("message-form");
     const messageInput = document.getElementById("message-input");
     const typingIndicator = document.getElementById("typing-indicator");
-    const clearChatButton = document.getElementById("clear-chat");
     const logoutButton = document.getElementById("logout-button");
-    const avatarUpload = document.getElementById("avatar-upload");
 
     let username = "";
-    let avatarUrl = "";
 
     // Toggle between Sign Up and Log In forms
     toggleAuth.addEventListener("click", () => {
@@ -406,20 +384,6 @@
       });
     });
 
-    // Upload Avatar
-    avatarUpload.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const avatarRef = storageRef(storage, `avatars/${username}`);
-        uploadBytes(avatarRef, file).then(() => {
-          getDownloadURL(avatarRef).then((url) => {
-            avatarUrl = url;
-            alert("Avatar uploaded successfully!");
-          });
-        });
-      }
-    });
-
     // Initialize Chat Functionality
     function initializeChat() {
       const messagesRef = ref(database, "messages");
@@ -434,12 +398,13 @@
           const messageDiv = document.createElement("div");
           messageDiv.className = message.username === username ? "message-sender" : "message-recipient";
           messageDiv.innerHTML = `
-            <img src="${message.avatarUrl || 'https://via.placeholder.com/30'}" class="avatar" alt="${message.username}" />
             <span>${message.username}: ${message.text}</span>
-            <span class="message-info">${new Date(message.timestamp).toLocaleTimeString()}</span>
-            <div class="message-actions">
-              <button onclick="editMessage('${id}')">Edit</button>
-              <button onclick="deleteMessage('${id}')">Delete</button>
+            <div class="message-info">
+              <span>${new Date(message.timestamp).toLocaleTimeString()}</span>
+              <div class="message-actions">
+                <button onclick="editMessage('${id}')">Edit</button>
+                <button onclick="deleteMessage('${id}')">Delete</button>
+              </div>
             </div>
           `;
           messagesDiv.appendChild(messageDiv);
@@ -455,8 +420,7 @@
           push(messagesRef, {
             username,
             text: messageText,
-            timestamp: Date.now(),
-            avatarUrl: avatarUrl || 'https://via.placeholder.com/30'
+            timestamp: Date.now()
           });
           messageInput.value = "";
           set(typingRef, false);
@@ -482,11 +446,6 @@
         if (!isSomeoneTyping) {
           typingIndicator.textContent = "";
         }
-      });
-
-      // Clear chat
-      clearChatButton.addEventListener("click", () => {
-        remove(messagesRef);
       });
     }
 
