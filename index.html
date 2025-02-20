@@ -121,6 +121,9 @@
       border-radius: 8px;
       margin-bottom: 10px;
       animation: fadeIn 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .message-recipient {
@@ -132,6 +135,9 @@
       border-radius: 8px;
       margin-bottom: 10px;
       animation: fadeIn 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     @keyframes fadeIn {
@@ -165,6 +171,30 @@
     }
 
     .message-actions button:hover {
+      text-decoration: underline;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    #avatar-upload {
+      display: none;
+    }
+
+    #avatar-label {
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+      color: #667eea;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #avatar-label:hover {
       text-decoration: underline;
     }
 
@@ -256,6 +286,8 @@
   <!-- Chat Container -->
   <div id="chat-container">
     <div id="app-name">WeOne Chat</div>
+    <label id="avatar-label" for="avatar-upload">Upload Avatar</label>
+    <input type="file" id="avatar-upload" accept="image/*" />
     <div id="messages"></div>
     <div id="typing-indicator"></div>
     <form id="message-form">
@@ -271,6 +303,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
     import { getDatabase, ref, push, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAQLUzYqaCaFMV74_dmqC2scBJgi0I-rVw",
@@ -286,6 +319,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
+    const storage = getStorage(app);
 
     const authContainer = document.getElementById("auth-container");
     const chatContainer = document.getElementById("chat-container");
@@ -299,8 +333,10 @@
     const typingIndicator = document.getElementById("typing-indicator");
     const clearChatButton = document.getElementById("clear-chat");
     const logoutButton = document.getElementById("logout-button");
+    const avatarUpload = document.getElementById("avatar-upload");
 
     let username = "";
+    let avatarUrl = "";
 
     // Toggle between Sign Up and Log In forms
     toggleAuth.addEventListener("click", () => {
@@ -370,6 +406,20 @@
       });
     });
 
+    // Upload Avatar
+    avatarUpload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const avatarRef = storageRef(storage, `avatars/${username}`);
+        uploadBytes(avatarRef, file).then(() => {
+          getDownloadURL(avatarRef).then((url) => {
+            avatarUrl = url;
+            alert("Avatar uploaded successfully!");
+          });
+        });
+      }
+    });
+
     // Initialize Chat Functionality
     function initializeChat() {
       const messagesRef = ref(database, "messages");
@@ -384,6 +434,7 @@
           const messageDiv = document.createElement("div");
           messageDiv.className = message.username === username ? "message-sender" : "message-recipient";
           messageDiv.innerHTML = `
+            <img src="${message.avatarUrl || 'https://via.placeholder.com/30'}" class="avatar" alt="${message.username}" />
             <span>${message.username}: ${message.text}</span>
             <span class="message-info">${new Date(message.timestamp).toLocaleTimeString()}</span>
             <div class="message-actions">
@@ -404,7 +455,8 @@
           push(messagesRef, {
             username,
             text: messageText,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            avatarUrl: avatarUrl || 'https://via.placeholder.com/30'
           });
           messageInput.value = "";
           set(typingRef, false);
