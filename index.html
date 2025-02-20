@@ -92,6 +92,15 @@
       display: none;
     }
 
+    #app-name {
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      color: #333;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+    }
+
     #messages {
       height: 300px;
       overflow-y: auto;
@@ -103,14 +112,25 @@
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    #messages div {
-      margin-bottom: 10px;
+    .message-sender {
+      background: #e1f5fe;
+      align-self: flex-start;
+      margin-right: auto;
+      max-width: 70%;
       padding: 10px;
       border-radius: 8px;
-      background: #e1f5fe;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-bottom: 10px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .message-recipient {
+      background: #f0f0f0;
+      align-self: flex-end;
+      margin-left: auto;
+      max-width: 70%;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
       animation: fadeIn 0.5s ease;
     }
 
@@ -128,6 +148,24 @@
     .message-info {
       font-size: 0.8em;
       color: #555;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .message-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #667eea;
+      font-size: 0.8em;
+    }
+
+    .message-actions button:hover {
+      text-decoration: underline;
     }
 
     #message-form {
@@ -186,12 +224,6 @@
       }
     }
 
-    #online-users {
-      margin-bottom: 20px;
-      font-size: 0.9em;
-      color: #333;
-    }
-
     #clear-chat, #logout-button {
       margin-top: 10px;
       padding: 12px 20px;
@@ -223,7 +255,7 @@
 
   <!-- Chat Container -->
   <div id="chat-container">
-    <div id="online-users">Online Users: <span id="users-list"></span></div>
+    <div id="app-name">WeOne Chat</div>
     <div id="messages"></div>
     <div id="typing-indicator"></div>
     <form id="message-form">
@@ -238,7 +270,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
-    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAQLUzYqaCaFMV74_dmqC2scBJgi0I-rVw",
@@ -267,7 +299,6 @@
     const typingIndicator = document.getElementById("typing-indicator");
     const clearChatButton = document.getElementById("clear-chat");
     const logoutButton = document.getElementById("logout-button");
-    const usersList = document.getElementById("users-list");
 
     let username = "";
 
@@ -343,15 +374,6 @@
     function initializeChat() {
       const messagesRef = ref(database, "messages");
       const typingRef = ref(database, `typing/${username}`);
-      const onlineUsersRef = ref(database, "onlineUsers");
-
-      // Add user to online users
-      set(ref(database, `onlineUsers/${username}`), true);
-
-      // Remove user from online users on disconnect
-      window.addEventListener("beforeunload", () => {
-        set(ref(database, `onlineUsers/${username}`), null);
-      });
 
       // Listen for new messages
       onValue(messagesRef, (snapshot) => {
@@ -360,9 +382,14 @@
         for (let id in messages) {
           const message = messages[id];
           const messageDiv = document.createElement("div");
+          messageDiv.className = message.username === username ? "message-sender" : "message-recipient";
           messageDiv.innerHTML = `
             <span>${message.username}: ${message.text}</span>
             <span class="message-info">${new Date(message.timestamp).toLocaleTimeString()}</span>
+            <div class="message-actions">
+              <button onclick="editMessage('${id}')">Edit</button>
+              <button onclick="deleteMessage('${id}')">Delete</button>
+            </div>
           `;
           messagesDiv.appendChild(messageDiv);
         }
@@ -405,17 +432,28 @@
         }
       });
 
-      // Listen for online users
-      onValue(onlineUsersRef, (snapshot) => {
-        const users = snapshot.val();
-        usersList.textContent = Object.keys(users || {}).join(", ");
-      });
-
       // Clear chat
       clearChatButton.addEventListener("click", () => {
         remove(messagesRef);
       });
     }
+
+    // Edit a message
+    window.editMessage = function(id) {
+      const newText = prompt("Edit your message:");
+      if (newText !== null && newText.trim() !== "") {
+        const messageRef = ref(database, `messages/${id}`);
+        update(messageRef, { text: newText.trim() });
+      }
+    };
+
+    // Delete a message
+    window.deleteMessage = function(id) {
+      if (confirm("Are you sure you want to delete this message?")) {
+        const messageRef = ref(database, `messages/${id}`);
+        remove(messageRef);
+      }
+    };
   </script>
 </body>
 </html>
