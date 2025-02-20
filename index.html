@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WeOne Chat</title>
+  <title>Kiddy Chat</title>
   <style>
     /* General Styles */
     body {
@@ -256,6 +256,17 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
+
+    .reply-indicator {
+      font-size: 0.8em;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .reply-indicator span {
+      color: #667eea;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -270,14 +281,14 @@
 
   <!-- Chat Container -->
   <div id="chat-container">
-    <div id="app-name">WeOne Chat</div>
+    <div id="app-name">Kiddy Chat</div>
     <div id="messages"></div>
     <div id="typing-indicator"></div>
     <form id="message-form">
       <input type="text" id="message-input" placeholder="Type your message..." required />
       <button type="submit" id="send-button">Send</button>
     </form>
-    <button id="home-button" onclick="window.location.href='https://newness.com'">Home</button>
+    <button id="home-button" onclick="window.location.href='https://icybertech.github.io/HweakwaeL-AJHS/'">Home</button>
     <button id="logout-button">Logout</button>
   </div>
 
@@ -315,6 +326,8 @@
     const logoutButton = document.getElementById("logout-button");
 
     let username = "";
+    let replyingToMessageId = null;
+    let startX = null;
 
     // Toggle between Sign Up and Log In forms
     toggleAuth.addEventListener("click", () => {
@@ -408,6 +421,9 @@
             </div>
           `;
           messagesDiv.appendChild(messageDiv);
+
+          // Add drag event listeners
+          addDragListeners(messageDiv, id);
         }
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
@@ -417,13 +433,19 @@
         e.preventDefault();
         const messageText = messageInput.value.trim();
         if (messageText) {
-          push(messagesRef, {
+          const messageData = {
             username,
             text: messageText,
             timestamp: Date.now()
-          });
+          };
+          if (replyingToMessageId) {
+            messageData.replyTo = replyingToMessageId;
+          }
+          push(messagesRef, messageData);
           messageInput.value = "";
           set(typingRef, false);
+          replyingToMessageId = null;
+          updateReplyIndicator();
         }
       });
 
@@ -448,6 +470,75 @@
         }
       });
     }
+
+    // Add drag event listeners to a message
+    function addDragListeners(messageDiv, messageId) {
+      let startX = null;
+
+      messageDiv.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+      });
+
+      messageDiv.addEventListener("touchmove", (e) => {
+        if (startX === null) return;
+        const currentX = e.touches[0].clientX;
+        const deltaX = currentX - startX;
+        if (Math.abs(deltaX) > 50) {
+          replyingToMessageId = messageId;
+          updateReplyIndicator();
+          startX = null;
+        }
+      });
+
+      messageDiv.addEventListener("touchend", () => {
+        startX = null;
+      });
+
+      messageDiv.addEventListener("mousedown", (e) => {
+        startX = e.clientX;
+      });
+
+      messageDiv.addEventListener("mousemove", (e) => {
+        if (startX === null) return;
+        const currentX = e.clientX;
+        const deltaX = currentX - startX;
+        if (Math.abs(deltaX) > 50) {
+          replyingToMessageId = messageId;
+          updateReplyIndicator();
+          startX = null;
+        }
+      });
+
+      messageDiv.addEventListener("mouseup", () => {
+        startX = null;
+      });
+    }
+
+    // Update the reply indicator
+    function updateReplyIndicator() {
+      const replyIndicator = document.getElementById("reply-indicator");
+      if (replyingToMessageId) {
+        if (!replyIndicator) {
+          const indicator = document.createElement("div");
+          indicator.id = "reply-indicator";
+          indicator.className = "reply-indicator";
+          indicator.innerHTML = `Replying to <span>${replyingToMessageId}</span> <button onclick="cancelReply()">Cancel</button>`;
+          messageForm.insertBefore(indicator, messageForm.firstChild);
+        } else {
+          replyIndicator.innerHTML = `Replying to <span>${replyingToMessageId}</span> <button onclick="cancelReply()">Cancel</button>`;
+        }
+      } else {
+        if (replyIndicator) {
+          replyIndicator.remove();
+        }
+      }
+    }
+
+    // Cancel the reply
+    window.cancelReply = function() {
+      replyingToMessageId = null;
+      updateReplyIndicator();
+    };
 
     // Edit a message
     window.editMessage = function(id) {
