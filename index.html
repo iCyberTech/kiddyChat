@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kiddy Chat</title>
+  <!-- FontAwesome for Video Call Icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     /* General Styles */
     body {
@@ -239,7 +241,7 @@
       }
     }
 
-    #home-button, #logout-button {
+    #home-button, #logout-button, #video-call-button {
       margin-top: 10px;
       padding: 12px 20px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -252,9 +254,17 @@
       box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
 
-    #home-button:hover, #logout-button:hover {
+    #home-button:hover, #logout-button:hover, #video-call-button:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    #video-call-button {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+    }
+
+    #video-call-button i {
+      margin-right: 8px;
     }
 
     .reply-indicator {
@@ -289,6 +299,9 @@
       <button type="submit" id="send-button">Send</button>
     </form>
     <button id="home-button" onclick="window.location.href='https://icybertech.github.io/HweakwaeL-AJHS/'">Home</button>
+    <button id="video-call-button" onclick="openVideoCall()">
+      <i class="fas fa-video"></i> Video Call
+    </button>
     <button id="logout-button">Logout</button>
   </div>
 
@@ -556,6 +569,11 @@
         remove(messageRef);
       }
     };
+
+    // Open Video Call
+    function openVideoCall() {
+      window.open("vid.html", "_blank");
+    }
   </script>
 </body>
 </html>
